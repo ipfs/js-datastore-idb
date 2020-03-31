@@ -35,7 +35,9 @@
     "interface-datastore": "ipfs/interface-datastore#fix/remove-node-globals"
   },
   "devDependencies": {
+    "aegir": "^21.4.5",
+    "chai": "^4.2.0",
     "datastore-core": "ipfs/js-datastore-core#fix/add-buffer",
-    "aegir": "^21.4.5"
+    "dirty-chai": "^2.0.1"
   }
 }
