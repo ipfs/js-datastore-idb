@@ -1,0 +1,41 @@
+{
+  "name": "datastore-idb",
+  "version": "0.0.0",
+  "description": "Datastore implementation with IndexedDB backend.",
+  "leadMaintainer": "Hugo Dias <hugomrdias@gmail.com>",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "aegir test -t browser -t webworker",
+    "test:browser": "aegir test -t browser",
+    "test:webworker": "aegir test -t webworker",
+    "build": "aegir build",
+    "lint": "aegir lint",
+    "release": "aegir release",
+    "release-minor": "aegir release --type minor",
+    "release-major": "aegir release --type major",
+    "coverage": "nyc -s npm run test:node && nyc report --reporter=html",
+    "dep-check": "aegir dep-check"
+  },
+  "repository": "github:ipfs/js-datastore-idb",
+  "keywords": [
+    "interface",
+    "key-value",
+    "ipfs",
+    "datastore",
+    "browser",
+    "idb"
+  ],
+  "author": "Hugo Dias <hugomrdias@gmail.com>",
+  "license": "MIT",
+  "bugs": "https://github.com/ipfs/js-datastore-idb/issues",
+  "homepage": "https://github.com/ipfs/js-datastore-idb#readme",
+  "dependencies": {
+    "buffer": "hugomrdias/level#fix/add-buffer",
+    "idb": "^5.0.2",
+    "interface-datastore": "ipfs/interface-datastore#fix/remove-node-globals"
+  },
+  "devDependencies": {
+    "datastore-core": "ipfs/js-datastore-core#fix/add-buffer",
+    "aegir": "^21.4.5"
+  }
+}
