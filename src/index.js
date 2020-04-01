@@ -35,6 +35,34 @@ function typedarrayToBuffer (arr) {
   }
 }
 
+const queryIt = async function * (q, store, location) {
+  let cursor = await store.transaction(location).store.openCursor()
+  let limit = 0
+
+  if (cursor && q.offset && q.offset > 0) {
+    cursor = await cursor.advance(q.offset)
+  }
+
+  while (cursor) {
+    // limit
+    if (q.limit !== undefined && q.limit === limit) {
+      return
+    }
+    limit++
+
+    const key = new Key(Buffer.from(cursor.key))
+    const value = Buffer.from(cursor.value)
+    if (!q.prefix || (q.prefix && key.toString().startsWith(q.prefix))) {
+      if (q.keysOnly) {
+        yield { key }
+      } else {
+        yield { key, value }
+      }
+    }
+    cursor = await cursor.continue()
+  }
+}
+
 class IdbDatastore {
   constructor (location) {
     this.location = location
@@ -135,34 +163,8 @@ class IdbDatastore {
     if (this.store === null) {
       throw new Error('Datastore needs to be opened.')
     }
-    let limit = 0
 
-    let it = (async function * (store, location) {
-      let cursor = await store.transaction(location).store.openCursor()
-
-      if (cursor && q.offset && q.offset > 0) {
-        cursor = await cursor.advance(q.offset)
-      }
-
-      while (cursor) {
-        // limit
-        if (q.limit !== undefined && q.limit === limit) {
-          return
-        }
-        limit++
-
-        const key = new Key(Buffer.from(cursor.key))
-        const value = Buffer.from(cursor.value)
-        if (!q.prefix || (q.prefix && key.toString().startsWith(q.prefix))) {
-          if (q.keysOnly) {
-            yield { key }
-          } else {
-            yield { key, value }
-          }
-        }
-        cursor = await cursor.continue()
-      }
-    })(this.store, this.location)
+    let it = queryIt(q, this.store, this.location)
 
     if (Array.isArray(q.filters)) {
       it = q.filters.reduce((it, f) => filter(it, f), it)
