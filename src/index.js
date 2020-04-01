@@ -38,6 +38,7 @@ function typedarrayToBuffer (arr) {
 class IdbDatastore {
   constructor (location) {
     this.location = location
+    this.store = null
   }
 
   async open () {
@@ -54,6 +55,9 @@ class IdbDatastore {
   }
 
   async put (key, val) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
     try {
       await this.store.put(this.location, val, key.toBuffer())
     } catch (err) {
@@ -62,6 +66,9 @@ class IdbDatastore {
   }
 
   async get (key) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
     let value
     try {
       value = await this.store.get(this.location, key.toBuffer())
@@ -77,6 +84,9 @@ class IdbDatastore {
   }
 
   async has (key) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
     try {
       await this.get(key)
     } catch (err) {
@@ -87,6 +97,9 @@ class IdbDatastore {
   }
 
   async delete (key) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
     try {
       await this.store.delete(this.location, key.toBuffer())
     } catch (err) {
@@ -106,6 +119,9 @@ class IdbDatastore {
         dels.push(key.toBuffer())
       },
       commit: async () => {
+        if (this.store === null) {
+          throw new Error('Datastore needs to be opened.')
+        }
         const tx = this.store.transaction(this.location, 'readwrite')
         const store = tx.store
         await Promise.all(puts.map(p => store.put(p[1], p[0])))
@@ -116,6 +132,9 @@ class IdbDatastore {
   }
 
   query (q) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
     let limit = 0
 
     let it = (async function * (store, location) {
@@ -157,6 +176,9 @@ class IdbDatastore {
   }
 
   close () {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
     return this.store.close()
   }
 
