@@ -1,10 +1,9 @@
 'use strict'
 
 const { Buffer } = require('buffer')
+const { openDB, deleteDB } = require('idb')
 const { Key, Errors, utils } = require('interface-datastore')
 const { filter, sortAll } = utils
-
-const { openDB, deleteDB } = require('idb')
 
 function isStrictTypedArray (arr) {
   return (
@@ -35,8 +34,18 @@ function typedarrayToBuffer (arr) {
   }
 }
 
+function str2ab (str) {
+  var buf = new ArrayBuffer(str.length)
+  var bufView = new Uint8Array(buf)
+  for (var i = 0, strLen = str.length; i < strLen; i++) {
+    bufView[i] = str.charCodeAt(i)
+  }
+  return buf
+}
+
 const queryIt = async function * (q, store, location) {
-  let cursor = await store.transaction(location).store.openCursor()
+  const range = q.prefix ? self.IDBKeyRange.bound(str2ab(q.prefix), str2ab(q.prefix + '\xFF'), false, true) : undefined
+  let cursor = await store.transaction(location).store.openCursor(range)
   let limit = 0
 
   if (cursor && q.offset && q.offset > 0) {
@@ -51,13 +60,11 @@ const queryIt = async function * (q, store, location) {
     limit++
 
     const key = new Key(Buffer.from(cursor.key))
-    const value = Buffer.from(cursor.value)
-    if (!q.prefix || (q.prefix && key.toString().startsWith(q.prefix))) {
-      if (q.keysOnly) {
-        yield { key }
-      } else {
-        yield { key, value }
-      }
+    if (q.keysOnly) {
+      yield { key }
+    } else {
+      const value = Buffer.from(cursor.value)
+      yield { key, value }
     }
     cursor = await cursor.continue()
   }
@@ -163,7 +170,6 @@ class IdbDatastore {
     if (this.store === null) {
       throw new Error('Datastore needs to be opened.')
     }
-
     let it = queryIt(q, this.store, this.location)
 
     if (Array.isArray(q.filters)) {
