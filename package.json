@@ -37,7 +37,7 @@
   "devDependencies": {
     "aegir": "^21.4.5",
     "chai": "^4.2.0",
-    "datastore-core": "ipfs/js-datastore-core#fix/add-buffer",
+    "datastore-core": "^1.0.0",
     "datastore-level": "^0.14.1",
     "dirty-chai": "^2.0.1",
     "iso-random-stream": "^1.1.1"
