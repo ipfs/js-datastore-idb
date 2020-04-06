@@ -71,15 +71,17 @@ const queryIt = async function * (q, store, location) {
 }
 
 class IdbDatastore {
-  constructor (location) {
-    this.location = location
+  constructor (location, options = {}) {
     this.store = null
+    this.options = options
+    this.location = options.prefix + location
+    this.version = options.version || 1
   }
 
   async open () {
     const location = this.location
     try {
-      this.store = await openDB(this.location, 1, {
+      this.store = await openDB(this.location, this.version, {
         upgrade (db) {
           db.createObjectStore(location)
         }
