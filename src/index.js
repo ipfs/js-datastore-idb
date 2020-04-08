@@ -5,7 +5,7 @@ const { openDB, deleteDB } = require('idb')
 const { Key, Errors, utils } = require('interface-datastore')
 const { filter, sortAll } = utils
 
-function isStrictTypedArray (arr) {
+const isStrictTypedArray = (arr) => {
   return (
     arr instanceof Int8Array ||
     arr instanceof Int16Array ||
@@ -19,10 +19,10 @@ function isStrictTypedArray (arr) {
   )
 }
 
-function typedarrayToBuffer (arr) {
+const typedarrayToBuffer = (arr) => {
   if (isStrictTypedArray(arr)) {
     // To avoid a copy, use the typed array's underlying ArrayBuffer to back new Buffer
-    var buf = Buffer.from(arr.buffer)
+    let buf = Buffer.from(arr.buffer)
     if (arr.byteLength !== arr.buffer.byteLength) {
       // Respect the "view", i.e. byteOffset and byteLength, without doing a copy
       buf = buf.slice(arr.byteOffset, arr.byteOffset + arr.byteLength)
@@ -34,10 +34,10 @@ function typedarrayToBuffer (arr) {
   }
 }
 
-function str2ab (str) {
-  var buf = new ArrayBuffer(str.length)
-  var bufView = new Uint8Array(buf)
-  for (var i = 0, strLen = str.length; i < strLen; i++) {
+const str2ab = (str) => {
+  const buf = new ArrayBuffer(str.length)
+  const bufView = new Uint8Array(buf)
+  for (let i = 0, strLen = str.length; i < strLen; i++) {
     bufView[i] = str.charCodeAt(i)
   }
   return buf
