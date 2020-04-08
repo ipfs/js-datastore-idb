@@ -1,3 +1,23 @@
+<a name="1.0.0"></a>
+# 1.0.0 (2020-04-08)
+
+
+### Bug Fixes
+
+* add guard for un open db ([d06332d](https://github.com/ipfs/js-datastore-idb/commit/d06332d))
+* add options ([2074f00](https://github.com/ipfs/js-datastore-idb/commit/2074f00))
+* benchmarks and perf tweaks ([71d6804](https://github.com/ipfs/js-datastore-idb/commit/71d6804))
+* skip node tests ([d8fd6e8](https://github.com/ipfs/js-datastore-idb/commit/d8fd6e8))
+* syntax tweaks ([7906f08](https://github.com/ipfs/js-datastore-idb/commit/7906f08))
+
+
+### Features
+
+* idb datastore ([336c7e7](https://github.com/ipfs/js-datastore-idb/commit/336c7e7))
+* improve query by a lot ([2ba5203](https://github.com/ipfs/js-datastore-idb/commit/2ba5203))
+
+
+
 <a name="0.14.1"></a>
 ## [0.14.1](https://github.com/ipfs/js-datastore-level/compare/v0.14.0...v0.14.1) (2020-01-14)
 
