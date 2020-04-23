@@ -79,6 +79,10 @@ class IdbDatastore {
   }
 
   async open () {
+    if (this.store !== null) {
+      return
+    }
+
     const location = this.location
     try {
       this.store = await openDB(this.location, this.version, {
@@ -189,7 +193,8 @@ class IdbDatastore {
     if (this.store === null) {
       throw new Error('Datastore needs to be opened.')
     }
-    return this.store.close()
+    this.store.close()
+    this.store = null
   }
 
   destroy () {
