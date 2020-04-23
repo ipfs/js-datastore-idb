@@ -1,6 +1,6 @@
 {
   "name": "datastore-idb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Datastore implementation with IndexedDB backend.",
   "leadMaintainer": "Hugo Dias <hugomrdias@gmail.com>",
   "main": "src/index.js",
