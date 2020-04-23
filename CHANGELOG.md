@@ -1,3 +1,14 @@
+<a name="1.0.1"></a>
+## [1.0.1](https://github.com/ipfs/js-datastore-idb/compare/v1.0.0...v1.0.1) (2020-04-23)
+
+
+### Bug Fixes
+
+* add bundle size config ([1fef7be](https://github.com/ipfs/js-datastore-idb/commit/1fef7be))
+* protect open and close ([0695ad6](https://github.com/ipfs/js-datastore-idb/commit/0695ad6))
+
+
+
 <a name="1.0.0"></a>
 # 1.0.0 (2020-04-08)
 
