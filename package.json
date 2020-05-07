@@ -32,13 +32,13 @@
   "dependencies": {
     "buffer": "^5.5.0",
     "idb": "^5.0.2",
-    "interface-datastore": "^0.8.3"
+    "interface-datastore": "^1.0.2"
   },
   "devDependencies": {
-    "aegir": "^21.4.5",
+    "aegir": "^22.0.0",
     "chai": "^4.2.0",
-    "datastore-core": "^1.0.0",
-    "datastore-level": "^0.14.1",
+    "datastore-core": "^1.1.0",
+    "datastore-level": "^1.1.0",
     "dirty-chai": "^2.0.1",
     "ipfs-utils": "^2.2.0",
     "iso-random-stream": "^1.1.1"

@@ -2,7 +2,7 @@
 
 const { Buffer } = require('buffer')
 const { openDB, deleteDB } = require('idb')
-const { Key, Errors, utils } = require('interface-datastore')
+const { Key, Errors, utils, Adapter } = require('interface-datastore')
 const { filter, sortAll } = utils
 
 const isStrictTypedArray = (arr) => {
@@ -70,8 +70,10 @@ const queryIt = async function * (q, store, location) {
   }
 }
 
-class IdbDatastore {
+class IdbDatastore extends Adapter {
   constructor (location, options = {}) {
+    super()
+
     this.store = null
     this.options = options
     this.location = options.prefix + location
