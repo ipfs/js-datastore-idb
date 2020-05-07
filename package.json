@@ -1,6 +1,6 @@
 {
   "name": "datastore-idb",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Datastore implementation with IndexedDB backend.",
   "leadMaintainer": "Hugo Dias <hugomrdias@gmail.com>",
   "main": "src/index.js",
@@ -44,6 +44,8 @@
     "iso-random-stream": "^1.1.1"
   },
   "contributors": [
-    "Hugo Dias <hugomrdias@gmail.com>"
+    "Hugo Dias <hugomrdias@gmail.com>",
+    "achingbrain <alex@achingbrain.net>",
+    "Hector Sanjuan <code@hector.link>"
   ]
 }
