@@ -1,3 +1,13 @@
+<a name="1.1.0"></a>
+# [1.1.0](https://github.com/ipfs/js-datastore-idb/compare/v1.0.2...v1.1.0) (2020-05-07)
+
+
+### Features
+
+* add streaming/cancellable API ([6d32b7f](https://github.com/ipfs/js-datastore-idb/commit/6d32b7f))
+
+
+
 <a name="1.0.2"></a>
 ## [1.0.2](https://github.com/ipfs/js-datastore-idb/compare/v1.0.1...v1.0.2) (2020-04-24)
 
