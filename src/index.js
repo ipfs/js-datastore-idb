@@ -43,33 +43,6 @@ const str2ab = (str) => {
   return buf
 }
 
-const queryIt = async function * (q, store, location) {
-  const range = q.prefix ? self.IDBKeyRange.bound(str2ab(q.prefix), str2ab(q.prefix + '\xFF'), false, true) : undefined
-  let cursor = await store.transaction(location).store.openCursor(range)
-  let limit = 0
-
-  if (cursor && q.offset && q.offset > 0) {
-    cursor = await cursor.advance(q.offset)
-  }
-
-  while (cursor) {
-    // limit
-    if (q.limit !== undefined && q.limit === limit) {
-      return
-    }
-    limit++
-
-    const key = new Key(Buffer.from(cursor.key))
-    if (q.keysOnly) {
-      yield { key }
-    } else {
-      const value = Buffer.from(cursor.value)
-      yield { key, value }
-    }
-    cursor = await cursor.continue()
-  }
-}
-
 class IdbDatastore extends Adapter {
   constructor (location, options = {}) {
     super()
@@ -78,6 +51,80 @@ class IdbDatastore extends Adapter {
     this.options = options
     this.location = options.prefix + location
     this.version = options.version || 1
+  }
+
+  _getStore () {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
+
+    if (!this._tx) {
+      let cleanup
+
+      // idb gives us an `tx.done` promise, but awaiting on it then doing other
+      // work can add tasks to the microtask queue which extends the life of
+      // the transaction which may not be what the caller intended.
+      const done = new Promise(resolve => {
+        cleanup = () => {
+          // make sure we don't accidentally reuse the 'finished' transaction
+          this._tx = null
+
+          // resolve on the next iteration of the event loop to ensure that
+          // we are actually, really done, the microtask queue has been emptied
+          // and the transaction has been auto-committed
+          setImmediate(() => {
+            resolve()
+          })
+        }
+      })
+
+      const tx = this.store.transaction(this.location, 'readwrite')
+      tx.oncomplete = cleanup
+      tx.onerror = cleanup
+      tx.onabort = cleanup
+
+      this._tx = {
+        tx,
+        done
+      }
+    }
+
+    // we only operate on one object store so the tx.store property is set
+    return this._tx.tx.store
+  }
+
+  async * _queryIt (q) {
+    if (this._tx) {
+      await this._tx.done
+    }
+
+    const range = q.prefix ? self.IDBKeyRange.bound(str2ab(q.prefix), str2ab(q.prefix + '\xFF'), false, true) : undefined
+    const store = this._getStore()
+    let cursor = await store.openCursor(range)
+    let limit = 0
+
+    if (cursor && q.offset && q.offset > 0) {
+      cursor = await cursor.advance(q.offset)
+    }
+
+    while (cursor) {
+      // limit
+      if (q.limit !== undefined && q.limit === limit) {
+        return
+      }
+      limit++
+
+      const key = new Key(Buffer.from(cursor.key))
+      if (q.keysOnly) {
+        yield { key }
+      } else {
+        const value = Buffer.from(cursor.value)
+        yield { key, value }
+      }
+      cursor = await cursor.continue()
+    }
+
+    await this._tx.done
   }
 
   async open () {
@@ -98,23 +145,17 @@ class IdbDatastore extends Adapter {
   }
 
   async put (key, val) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
     try {
-      await this.store.put(this.location, val, key.toBuffer())
+      await this._getStore().put(val, key.toBuffer())
     } catch (err) {
       throw Errors.dbWriteFailedError(err)
     }
   }
 
   async get (key) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
     let value
     try {
-      value = await this.store.get(this.location, key.toBuffer())
+      value = await this._getStore().get(key.toBuffer())
     } catch (err) {
       throw Errors.dbWriteFailedError(err)
     }
@@ -127,24 +168,19 @@ class IdbDatastore extends Adapter {
   }
 
   async has (key) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
     try {
-      await this.get(key)
+      const res = await this._getStore().getKey(key.toBuffer())
+
+      return Boolean(res)
     } catch (err) {
       if (err.code === 'ERR_NOT_FOUND') return false
       throw err
     }
-    return true
   }
 
   async delete (key) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
     try {
-      await this.store.delete(this.location, key.toBuffer())
+      await this._getStore().delete(key.toBuffer())
     } catch (err) {
       throw Errors.dbDeleteFailedError(err)
     }
@@ -162,23 +198,20 @@ class IdbDatastore extends Adapter {
         dels.push(key.toBuffer())
       },
       commit: async () => {
-        if (this.store === null) {
-          throw new Error('Datastore needs to be opened.')
+        if (this._tx) {
+          await this._tx.done
         }
-        const tx = this.store.transaction(this.location, 'readwrite')
-        const store = tx.store
+
+        const store = this._getStore()
         await Promise.all(puts.map(p => store.put(p[1], p[0])))
         await Promise.all(dels.map(p => store.delete(p)))
-        await tx.done
+        await this._tx.done
       }
     }
   }
 
   query (q) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
-    let it = queryIt(q, this.store, this.location)
+    let it = this._queryIt(q)
 
     if (Array.isArray(q.filters)) {
       it = q.filters.reduce((it, f) => filter(it, f), it)
@@ -191,12 +224,15 @@ class IdbDatastore extends Adapter {
     return it
   }
 
-  close () {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
+  async close () {
+    if (this._tx) {
+      await this._tx.done
     }
-    this.store.close()
-    this.store = null
+
+    if (this.store) {
+      this.store.close()
+      this.store = null
+    }
   }
 
   destroy () {
