@@ -84,13 +84,13 @@ class IdbDatastore extends Adapter {
       tx.onabort = cleanup
 
       this._tx = {
-        tx,
+        store: tx.store,
         done
       }
     }
 
     // we only operate on one object store so the tx.store property is set
-    return this._tx.tx.store
+    return this._tx.store
   }
 
   async * _queryIt (q) {
@@ -146,7 +146,11 @@ class IdbDatastore extends Adapter {
 
   async put (key, val) {
     try {
-      await this._getStore().put(val, key.toBuffer())
+      if (this._tx) {
+        await this._tx.store.put(val, key.toBuffer())
+      } else {
+        await this.store.put(this.location, val, key.toBuffer())
+      }
     } catch (err) {
       throw Errors.dbWriteFailedError(err)
     }
@@ -155,7 +159,11 @@ class IdbDatastore extends Adapter {
   async get (key) {
     let value
     try {
-      value = await this._getStore().get(key.toBuffer())
+      if (this._tx) {
+        value = await this._tx.store.get(key.toBuffer())
+      } else {
+        value = await this.store.get(this.location, key.toBuffer())
+      }
     } catch (err) {
       throw Errors.dbWriteFailedError(err)
     }
@@ -169,7 +177,13 @@ class IdbDatastore extends Adapter {
 
   async has (key) {
     try {
-      const res = await this._getStore().getKey(key.toBuffer())
+      let res
+
+      if (this._tx) {
+        res = await this._tx.store.getKey(key.toBuffer())
+      } else {
+        res = await this.store.getKey(this.location, key.toBuffer())
+      }
 
       return Boolean(res)
     } catch (err) {
@@ -180,7 +194,11 @@ class IdbDatastore extends Adapter {
 
   async delete (key) {
     try {
-      await this._getStore().delete(key.toBuffer())
+      if (this._tx) {
+        await this._tx.store.delete(key.toBuffer())
+      } else {
+        await this.store.delete(this.location, key.toBuffer())
+      }
     } catch (err) {
       throw Errors.dbDeleteFailedError(err)
     }
