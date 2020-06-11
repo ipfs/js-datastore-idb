@@ -64,11 +64,15 @@ class IdbDatastore extends Adapter {
 
     let finished
 
+    const tx = this.store.transaction(this.location, 'readwrite')
+
     // idb gives us an `tx.done` promise, but awaiting on it then doing other
     // work can add tasks to the microtask queue which extends the life of
     // the transaction which may not be what the caller intended.
     const done = new Promise((resolve) => {
       finished = () => {
+        tx.active = false
+
         // resolve on the next iteration of the event loop to ensure that
         // we are actually, really done, the microtask queue has been emptied
         // and the transaction has been auto-committed
@@ -78,21 +82,12 @@ class IdbDatastore extends Adapter {
       }
     })
 
-    const tx = this.store.transaction(this.location, 'readwrite')
     tx.oncomplete = finished
     tx.onerror = finished
     tx.onabort = finished
+    tx.done = done
 
-    setImmediate(() => {
-      // this will run on the next iteration of the event loop. if we're here,
-      // this transaction has autocomitted and is no longer safe to use.
-      this._tx = null
-    })
-
-    this._tx = {
-      store: tx.store,
-      done
-    }
+    this._tx = tx
 
     // we only operate on one object store
     return this._tx.store
@@ -102,6 +97,12 @@ class IdbDatastore extends Adapter {
     const range = q.prefix ? self.IDBKeyRange.bound(str2ab(q.prefix), str2ab(q.prefix + '\xFF'), false, true) : undefined
     const store = await this._getStore()
     let cursor = await store.openCursor(range)
+
+    // the transaction is only active *after* we've opened the cursor, so stop any interleaved
+    // read/writes from encountering 'transaction is not active' errors while we open the cursor.
+    // Sigh. This is why we can't have nice things.
+    this._tx.active = true
+
     let limit = 0
 
     if (cursor && q.offset && q.offset > 0) {
@@ -116,15 +117,27 @@ class IdbDatastore extends Adapter {
       limit++
 
       const key = new Key(Buffer.from(cursor.key))
+      let value
+
+      if (!q.keysOnly) {
+        value = Buffer.from(cursor.value)
+      }
+
+      // the transaction can end before the cursor promise has resolved
+      this._tx.active = false
+      cursor = await cursor.continue()
+      this._tx.active = true
+
+      if (!cursor) {
+        // the transaction has finished
+        this._tx = null
+      }
 
       if (q.keysOnly) {
         yield { key }
       } else {
-        const value = Buffer.from(cursor.value)
         yield { key, value }
       }
-
-      cursor = await cursor.continue()
     }
 
     this._tx = null
@@ -153,7 +166,7 @@ class IdbDatastore extends Adapter {
     }
 
     try {
-      if (this._tx) {
+      if (this._tx && this._tx.active) {
         await this._tx.store.put(val, key.toBuffer())
       } else {
         await this.store.put(this.location, val, key.toBuffer())
@@ -170,7 +183,7 @@ class IdbDatastore extends Adapter {
 
     let value
     try {
-      if (this._tx) {
+      if (this._tx && this._tx.active) {
         value = await this._tx.store.get(key.toBuffer())
       } else {
         value = await this.store.get(this.location, key.toBuffer())
@@ -194,7 +207,7 @@ class IdbDatastore extends Adapter {
     try {
       let res
 
-      if (this._tx) {
+      if (this._tx && this._tx.active) {
         res = await this._tx.store.getKey(key.toBuffer())
       } else {
         res = await this.store.getKey(this.location, key.toBuffer())
@@ -213,7 +226,7 @@ class IdbDatastore extends Adapter {
     }
 
     try {
-      if (this._tx) {
+      if (this._tx && this._tx.active) {
         await this._tx.store.delete(key.toBuffer())
       } else {
         await this.store.delete(this.location, key.toBuffer())
@@ -236,6 +249,7 @@ class IdbDatastore extends Adapter {
       },
       commit: async () => {
         const store = await this._getStore()
+        this._tx.active = true
         await Promise.all(puts.map(p => store.put(p[1], p[0])))
         await Promise.all(dels.map(p => store.delete(p)))
         this._tx = null
