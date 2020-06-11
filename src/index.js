@@ -53,53 +53,54 @@ class IdbDatastore extends Adapter {
     this.version = options.version || 1
   }
 
-  _getStore () {
+  async _getStore () {
     if (this.store === null) {
       throw new Error('Datastore needs to be opened.')
     }
 
-    if (!this._tx) {
-      let cleanup
-
-      // idb gives us an `tx.done` promise, but awaiting on it then doing other
-      // work can add tasks to the microtask queue which extends the life of
-      // the transaction which may not be what the caller intended.
-      const done = new Promise(resolve => {
-        cleanup = () => {
-          // make sure we don't accidentally reuse the 'finished' transaction
-          this._tx = null
-
-          // resolve on the next iteration of the event loop to ensure that
-          // we are actually, really done, the microtask queue has been emptied
-          // and the transaction has been auto-committed
-          setImmediate(() => {
-            resolve()
-          })
-        }
-      })
-
-      const tx = this.store.transaction(this.location, 'readwrite')
-      tx.oncomplete = cleanup
-      tx.onerror = cleanup
-      tx.onabort = cleanup
-
-      this._tx = {
-        store: tx.store,
-        done
-      }
-    }
-
-    // we only operate on one object store so the tx.store property is set
-    return this._tx.store
-  }
-
-  async * _queryIt (q) {
     if (this._tx) {
       await this._tx.done
     }
 
+    let finished
+
+    // idb gives us an `tx.done` promise, but awaiting on it then doing other
+    // work can add tasks to the microtask queue which extends the life of
+    // the transaction which may not be what the caller intended.
+    const done = new Promise((resolve) => {
+      finished = () => {
+        // resolve on the next iteration of the event loop to ensure that
+        // we are actually, really done, the microtask queue has been emptied
+        // and the transaction has been auto-committed
+        setInterval(() => {
+          resolve()
+        })
+      }
+    })
+
+    const tx = this.store.transaction(this.location, 'readwrite')
+    tx.oncomplete = finished
+    tx.onerror = finished
+    tx.onabort = finished
+
+    setImmediate(() => {
+      // this will run on the next iteration of the event loop. if we're here,
+      // this transaction has autocomitted and is no longer safe to use.
+      this._tx = null
+    })
+
+    this._tx = {
+      store: tx.store,
+      done
+    }
+
+    // we only operate on one object store
+    return this._tx.store
+  }
+
+  async * _queryIt (q) {
     const range = q.prefix ? self.IDBKeyRange.bound(str2ab(q.prefix), str2ab(q.prefix + '\xFF'), false, true) : undefined
-    const store = this._getStore()
+    const store = await this._getStore()
     let cursor = await store.openCursor(range)
     let limit = 0
 
@@ -110,21 +111,23 @@ class IdbDatastore extends Adapter {
     while (cursor) {
       // limit
       if (q.limit !== undefined && q.limit === limit) {
-        return
+        break
       }
       limit++
 
       const key = new Key(Buffer.from(cursor.key))
+
       if (q.keysOnly) {
         yield { key }
       } else {
         const value = Buffer.from(cursor.value)
         yield { key, value }
       }
+
       cursor = await cursor.continue()
     }
 
-    await this._tx.done
+    this._tx = null
   }
 
   async open () {
@@ -145,6 +148,10 @@ class IdbDatastore extends Adapter {
   }
 
   async put (key, val) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
+
     try {
       if (this._tx) {
         await this._tx.store.put(val, key.toBuffer())
@@ -157,6 +164,10 @@ class IdbDatastore extends Adapter {
   }
 
   async get (key) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
+
     let value
     try {
       if (this._tx) {
@@ -176,6 +187,10 @@ class IdbDatastore extends Adapter {
   }
 
   async has (key) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
+
     try {
       let res
 
@@ -193,6 +208,10 @@ class IdbDatastore extends Adapter {
   }
 
   async delete (key) {
+    if (this.store === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
+
     try {
       if (this._tx) {
         await this._tx.store.delete(key.toBuffer())
@@ -216,14 +235,10 @@ class IdbDatastore extends Adapter {
         dels.push(key.toBuffer())
       },
       commit: async () => {
-        if (this._tx) {
-          await this._tx.done
-        }
-
-        const store = this._getStore()
+        const store = await this._getStore()
         await Promise.all(puts.map(p => store.put(p[1], p[0])))
         await Promise.all(dels.map(p => store.delete(p)))
-        await this._tx.done
+        this._tx = null
       }
     }
   }
