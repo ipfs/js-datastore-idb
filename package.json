@@ -32,7 +32,8 @@
   "dependencies": {
     "buffer": "^5.5.0",
     "idb": "^5.0.2",
-    "interface-datastore": "^1.0.3"
+    "interface-datastore": "^1.0.3",
+    "p-queue": "^6.4.0"
   },
   "devDependencies": {
     "aegir": "^22.0.0",

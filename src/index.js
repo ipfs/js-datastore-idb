@@ -4,6 +4,7 @@ const { Buffer } = require('buffer')
 const { openDB, deleteDB } = require('idb')
 const { Key, Errors, utils, Adapter } = require('interface-datastore')
 const { filter, sortAll } = utils
+const { default: PQueue } = require('p-queue')
 
 const isStrictTypedArray = (arr) => {
   return (
@@ -43,104 +44,155 @@ const str2ab = (str) => {
   return buf
 }
 
+class TaskQueue {
+  constructor (store) {
+    this._defaultStore = store
+    this._tasks = []
+  }
+
+  push (task) {
+    let ok
+    let fail
+
+    this._tasks.push(async (store) => {
+      try {
+        ok(await task(store))
+      } catch (err) {
+        if (err.message.includes('finished')) {
+          try {
+            return ok(await task(this._defaultStore))
+          } catch (err) {
+            return fail(err)
+          }
+        }
+
+        fail(err)
+      }
+    })
+
+    return new Promise((resolve, reject) => {
+      ok = resolve
+      fail = reject
+    })
+  }
+
+  async drain (store) {
+    while (this._tasks.length) {
+      const task = this._tasks.shift()
+
+      await task(store || this._defaultStore)
+    }
+  }
+}
+
 class IdbDatastore extends Adapter {
   constructor (location, options = {}) {
     super()
 
     this.store = null
     this.options = options
-    this.location = options.prefix + location
+    this.location = (options.prefix || '') + location
     this.version = options.version || 1
+
+    this.transactionQueue = new PQueue({ concurrency: 1 })
+    this._lastTransactionFinished = null
   }
 
-  async _getStore () {
+  _getStore () {
     if (this.store === null) {
       throw new Error('Datastore needs to be opened.')
     }
 
-    if (this._tx) {
-      await this._tx.done
-    }
+    return this.transactionQueue.add(async () => {
+      await this._lastTransactionFinished
 
-    let finished
+      let next
 
-    const tx = this.store.transaction(this.location, 'readwrite')
-
-    // idb gives us an `tx.done` promise, but awaiting on it then doing other
-    // work can add tasks to the microtask queue which extends the life of
-    // the transaction which may not be what the caller intended.
-    const done = new Promise((resolve) => {
-      finished = () => {
-        tx.active = false
-
-        // resolve on the next iteration of the event loop to ensure that
-        // we are actually, really done, the microtask queue has been emptied
-        // and the transaction has been auto-committed
-        setInterval(() => {
+      this._lastTransactionFinished = new Promise(resolve => {
+        next = () => {
+          // not using this transaction any more
+          this._tx = null
           resolve()
-        })
+        }
+      })
+
+      this._tx = this.store.transaction('readwrite')
+      this._tx.oncomplete = () => {
+        if (this._tx) {
+          this._tx.active = false
+        }
+      }
+      this._tx.onerror = () => {
+        if (this._tx) {
+          this._tx.active = false
+        }
+      }
+      this._tx.onabort = () => {
+        if (this._tx) {
+          this._tx.active = false
+        }
+      }
+
+      return {
+        store: this._tx.store,
+        done: next
       }
     })
-
-    tx.oncomplete = finished
-    tx.onerror = finished
-    tx.onabort = finished
-    tx.done = done
-
-    this._tx = tx
-
-    // we only operate on one object store
-    return this._tx.store
   }
 
   async * _queryIt (q) {
     const range = q.prefix ? self.IDBKeyRange.bound(str2ab(q.prefix), str2ab(q.prefix + '\xFF'), false, true) : undefined
-    const store = await this._getStore()
-    let cursor = await store.openCursor(range)
+    const {
+      store,
+      done
+    } = await this._getStore()
 
-    // the transaction is only active *after* we've opened the cursor, so stop any interleaved
-    // read/writes from encountering 'transaction is not active' errors while we open the cursor.
-    // Sigh. This is why we can't have nice things.
-    this._tx.active = true
+    try {
+      let cursor = await store.openCursor(range)
 
-    let limit = 0
+      let limit = 0
 
-    if (cursor && q.offset && q.offset > 0) {
-      cursor = await cursor.advance(q.offset)
+      if (cursor && q.offset && q.offset > 0) {
+        cursor = await cursor.advance(q.offset)
+      }
+
+      while (cursor) {
+        // the transaction is only active *after* we've opened the cursor, so stop any interleaved
+        // read/writes from encountering 'transaction is not active' errors while we open the cursor.
+        // Sigh. This is why we can't have nice things.
+        this._tx.active = true
+
+        // process any requests that occured while the cursor was moving
+        await this.taskQueue.drain(store)
+
+        // limit
+        if (q.limit !== undefined && q.limit === limit) {
+          break
+        }
+        limit++
+
+        const key = new Key(Buffer.from(cursor.key))
+        let value
+
+        if (!q.keysOnly) {
+          value = Buffer.from(cursor.value)
+        }
+
+        if (q.keysOnly) {
+          yield { key }
+        } else {
+          yield { key, value }
+        }
+
+        // the transaction can end before the cursor promise has resolved
+        this._tx.active = false
+        cursor = await cursor.continue()
+      }
+
+      await this.taskQueue.drain()
+    } finally {
+      done()
     }
-
-    while (cursor) {
-      // limit
-      if (q.limit !== undefined && q.limit === limit) {
-        break
-      }
-      limit++
-
-      const key = new Key(Buffer.from(cursor.key))
-      let value
-
-      if (!q.keysOnly) {
-        value = Buffer.from(cursor.value)
-      }
-
-      // the transaction can end before the cursor promise has resolved
-      this._tx.active = false
-      cursor = await cursor.continue()
-      this._tx.active = true
-
-      if (!cursor) {
-        // the transaction has finished
-        this._tx = null
-      }
-
-      if (q.keysOnly) {
-        yield { key }
-      } else {
-        yield { key, value }
-      }
-    }
-
-    this._tx = null
   }
 
   async open () {
@@ -150,14 +202,27 @@ class IdbDatastore extends Adapter {
 
     const location = this.location
     try {
-      this.store = await openDB(this.location, this.version, {
+      const store = await openDB(location, this.version, {
         upgrade (db) {
           db.createObjectStore(location)
         }
       })
+
+      // this store requires a `location` arg but the transaction stores
+      // do not so make the API the same
+      this.store = {
+        get: (key) => store.get(location, key),
+        getKey: (key) => store.getKey(location, key),
+        put: (key, value) => store.put(location, key, value),
+        delete: (key) => store.delete(location, key),
+        transaction: (type) => store.transaction(location, type),
+        close: () => store.close()
+      }
     } catch (err) {
       throw Errors.dbOpenFailedError(err)
     }
+
+    this.taskQueue = new TaskQueue(this.store)
   }
 
   async put (key, val) {
@@ -166,13 +231,21 @@ class IdbDatastore extends Adapter {
     }
 
     try {
-      if (this._tx && this._tx.active) {
-        await this._tx.store.put(val, key.toBuffer())
+      if (this._tx) {
+        if (this._tx.active) {
+          await this._tx.store.put(val, key.toBuffer())
+        } else {
+          await this.taskQueue.push((store) => store.put(val, key.toBuffer()))
+        }
       } else {
-        await this.store.put(this.location, val, key.toBuffer())
+        await this.store.put(val, key.toBuffer())
       }
     } catch (err) {
-      throw Errors.dbWriteFailedError(err)
+      if (err.name === 'TransactionInactiveError') {
+        await this.taskQueue.push((store) => store.put(val, key.toBuffer()))
+      } else {
+        throw Errors.dbWriteFailedError(err)
+      }
     }
   }
 
@@ -183,13 +256,21 @@ class IdbDatastore extends Adapter {
 
     let value
     try {
-      if (this._tx && this._tx.active) {
-        value = await this._tx.store.get(key.toBuffer())
+      if (this._tx) {
+        if (this._tx.active) {
+          value = await this._tx.store.get(key.toBuffer())
+        } else {
+          value = await this.taskQueue.push((store) => store.get(key.toBuffer()))
+        }
       } else {
-        value = await this.store.get(this.location, key.toBuffer())
+        value = await this.store.get(key.toBuffer())
       }
     } catch (err) {
-      throw Errors.dbWriteFailedError(err)
+      if (err.name === 'TransactionInactiveError') {
+        value = await this.taskQueue.push((store) => store.get(key.toBuffer()))
+      } else {
+        throw Errors.dbWriteFailedError(err)
+      }
     }
 
     if (!value) {
@@ -204,20 +285,29 @@ class IdbDatastore extends Adapter {
       throw new Error('Datastore needs to be opened.')
     }
 
+    let res
+
     try {
-      let res
-
-      if (this._tx && this._tx.active) {
-        res = await this._tx.store.getKey(key.toBuffer())
+      if (this._tx) {
+        if (this._tx.active) {
+          res = await this._tx.store.getKey(key.toBuffer())
+        } else {
+          res = await this.taskQueue.push((store) => store.getKey(key.toBuffer()))
+        }
       } else {
-        res = await this.store.getKey(this.location, key.toBuffer())
+        res = await this.store.getKey(key.toBuffer())
       }
-
-      return Boolean(res)
     } catch (err) {
-      if (err.code === 'ERR_NOT_FOUND') return false
-      throw err
+      if (err.name === 'TransactionInactiveError') {
+        res = await this.taskQueue.push((store) => store.getKey(key.toBuffer()))
+      } else if (err.code === 'ERR_NOT_FOUND') {
+        return false
+      } else {
+        throw err
+      }
     }
+
+    return Boolean(res)
   }
 
   async delete (key) {
@@ -226,13 +316,21 @@ class IdbDatastore extends Adapter {
     }
 
     try {
-      if (this._tx && this._tx.active) {
-        await this._tx.store.delete(key.toBuffer())
+      if (this._tx) {
+        if (this._tx.active) {
+          await this._tx.store.delete(key.toBuffer())
+        } else {
+          await this.taskQueue.push((store) => store.delete(key.toBuffer()))
+        }
       } else {
-        await this.store.delete(this.location, key.toBuffer())
+        await this.store.delete(key.toBuffer())
       }
     } catch (err) {
-      throw Errors.dbDeleteFailedError(err)
+      if (err.name === 'TransactionInactiveError') {
+        await this.taskQueue.push((store) => store.delete(key.toBuffer()))
+      } else {
+        throw Errors.dbDeleteFailedError(err)
+      }
     }
   }
 
@@ -248,11 +346,24 @@ class IdbDatastore extends Adapter {
         dels.push(key.toBuffer())
       },
       commit: async () => {
-        const store = await this._getStore()
-        this._tx.active = true
-        await Promise.all(puts.map(p => store.put(p[1], p[0])))
-        await Promise.all(dels.map(p => store.delete(p)))
-        this._tx = null
+        const {
+          store,
+          done
+        } = await this._getStore()
+
+        try {
+          this._tx.active = true
+
+          // process any requests that occured while the transaction was opening
+          await this.taskQueue.drain(store)
+
+          await Promise.all(puts.map(p => store.put(p[1], p[0])))
+          await Promise.all(dels.map(p => store.delete(p)))
+
+          await this.taskQueue.drain(store)
+        } finally {
+          done()
+        }
       }
     }
   }

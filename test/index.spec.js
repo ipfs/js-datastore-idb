@@ -51,4 +51,65 @@ describe('IndexedDB Datastore', function () {
       }
     })
   })
+
+  describe('concurrency', () => {
+    let store
+
+    before(async () => {
+      store = new IDBStore('hello')
+      await store.open()
+    })
+
+    it('should not explode under unreasonable load', function (done) {
+      this.timeout(10000)
+
+      const updater = setInterval(async () => {
+        try {
+          const key = new Key('/a-' + Date.now())
+
+          await store.put(key, Buffer.from([0, 1, 2, 3]))
+          await store.has(key)
+          await store.get(key)
+        } catch (err) {
+          clearInterval(updater)
+          clearInterval(queryier)
+          clearInterval(otherQueryier)
+          done(err)
+        }
+      }, 0)
+
+      const queryier = setInterval(async () => {
+        try {
+          for await (const { key } of store.query({})) {
+            await store.has(key)
+          }
+        } catch (err) {
+          clearInterval(updater)
+          clearInterval(queryier)
+          clearInterval(otherQueryier)
+          done(err)
+        }
+      }, 0)
+
+      const otherQueryier = setInterval(async () => {
+        try {
+          for await (const { key } of store.query({})) {
+            await store.has(key)
+          }
+        } catch (err) {
+          clearInterval(updater)
+          clearInterval(queryier)
+          clearInterval(otherQueryier)
+          done(err)
+        }
+      }, 0)
+
+      setTimeout(() => {
+        clearInterval(updater)
+        clearInterval(queryier)
+        clearInterval(otherQueryier)
+        done()
+      }, 5000)
+    })
+  })
 })
