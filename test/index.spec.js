@@ -52,7 +52,7 @@ describe('IndexedDB Datastore', function () {
     })
   })
 
-  describe.only('concurrency', () => {
+  describe('concurrency', () => {
     let store
 
     before(async () => {
