@@ -52,7 +52,7 @@ describe('IndexedDB Datastore', function () {
     })
   })
 
-  describe('concurrency', () => {
+  describe.only('concurrency', () => {
     let store
 
     before(async () => {
@@ -72,42 +72,48 @@ describe('IndexedDB Datastore', function () {
           await store.get(key)
         } catch (err) {
           clearInterval(updater)
-          clearInterval(queryier)
-          clearInterval(otherQueryier)
+          clearInterval(mutatorQuery)
+          clearInterval(readOnlyQuery)
           done(err)
         }
       }, 0)
 
-      const queryier = setInterval(async () => {
+      const mutatorQuery = setInterval(async () => {
+        try {
+          for await (const { key } of store.query({})) {
+            await store.get(key)
+
+            const otherKey = new Key('/b-' + Date.now())
+            const otherValue = Buffer.from([0, 1, 2, 3])
+            await store.put(otherKey, otherValue)
+            const res = await store.get(otherKey)
+            expect(res).to.deep.equal(otherValue)
+          }
+        } catch (err) {
+          clearInterval(updater)
+          clearInterval(mutatorQuery)
+          clearInterval(readOnlyQuery)
+          done(err)
+        }
+      }, 0)
+
+      const readOnlyQuery = setInterval(async () => {
         try {
           for await (const { key } of store.query({})) {
             await store.has(key)
           }
         } catch (err) {
           clearInterval(updater)
+          clearInterval(mutatorQuery)
           clearInterval(queryier)
-          clearInterval(otherQueryier)
-          done(err)
-        }
-      }, 0)
-
-      const otherQueryier = setInterval(async () => {
-        try {
-          for await (const { key } of store.query({})) {
-            await store.has(key)
-          }
-        } catch (err) {
-          clearInterval(updater)
-          clearInterval(queryier)
-          clearInterval(otherQueryier)
           done(err)
         }
       }, 0)
 
       setTimeout(() => {
         clearInterval(updater)
-        clearInterval(queryier)
-        clearInterval(otherQueryier)
+        clearInterval(mutatorQuery)
+        clearInterval(readOnlyQuery)
         done()
       }, 5000)
     })
