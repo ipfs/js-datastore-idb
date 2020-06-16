@@ -32,7 +32,7 @@
   "dependencies": {
     "buffer": "^5.5.0",
     "idb": "^5.0.2",
-    "interface-datastore": "^1.0.3",
+    "interface-datastore": "ipfs/interface-datastore#test/add-tests-for-mutating-datastore-during-query",
     "p-queue": "^6.4.0"
   },
   "devDependencies": {

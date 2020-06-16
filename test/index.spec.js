@@ -5,6 +5,7 @@ const { MountDatastore } = require('datastore-core')
 const { Key } = require('interface-datastore')
 const { isNode } = require('ipfs-utils/src/env')
 const IDBStore = require('../src')
+const { expect } = require('aegir/utils/chai')
 
 describe('IndexedDB Datastore', function () {
   if (isNode) {
@@ -105,7 +106,7 @@ describe('IndexedDB Datastore', function () {
         } catch (err) {
           clearInterval(updater)
           clearInterval(mutatorQuery)
-          clearInterval(queryier)
+          clearInterval(readOnlyQuery)
           done(err)
         }
       }, 0)
