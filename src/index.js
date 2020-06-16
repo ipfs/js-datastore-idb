@@ -76,7 +76,7 @@ class IdbDatastore extends Adapter {
 
     this.store = null
     this.options = options
-    this.location = options.prefix + location
+    this.location = (options.prefix || '') + location
     this.version = options.version || 1
   }
 
