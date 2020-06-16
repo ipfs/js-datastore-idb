@@ -6,10 +6,11 @@ const { Key } = require('interface-datastore')
 const { isNode } = require('ipfs-utils/src/env')
 const IDBStore = require('../src')
 
-describe('LevelDatastore', function () {
+describe('IndexedDB Datastore', function () {
   if (isNode) {
     return
   }
+
   describe('interface-datastore (idb)', () => {
     const store = new IDBStore('hello')
     require('interface-datastore/src/tests')({
