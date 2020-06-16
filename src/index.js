@@ -43,10 +43,15 @@ const str2ab = (str) => {
   return buf
 }
 
-const queryIt = async function * (q, store, location) {
+const queryIt = async function * (q, instance) {
+  const { db, location } = instance
   const range = q.prefix ? self.IDBKeyRange.bound(str2ab(q.prefix), str2ab(q.prefix + '\xFF'), false, true) : undefined
-  let cursor = await store.transaction(location).store.openCursor(range)
+  const tx = db.transaction(location, 'readwrite')
+  const store = tx.objectStore(location)
+  let cursor = await store.openCursor(range)
   let limit = 0
+
+  instance.tx = tx
 
   if (cursor && q.offset && q.offset > 0) {
     cursor = await cursor.advance(q.offset)
@@ -68,26 +73,41 @@ const queryIt = async function * (q, store, location) {
     }
     cursor = await cursor.continue()
   }
+  instance.tx = null
 }
 
 class IdbDatastore extends Adapter {
   constructor (location, options = {}) {
     super()
 
-    this.store = null
+    this.db = null
     this.options = options
     this.location = (options.prefix || '') + location
     this.version = options.version || 1
+    /** @type {IDBTransaction} */
+    this.tx = null
+  }
+
+  getStore (mode) {
+    if (this.db === null) {
+      throw new Error('Datastore needs to be opened.')
+    }
+
+    if (this.tx) {
+      return this.tx.objectStore(this.location)
+    }
+
+    return this.db.transaction(this.location, mode).objectStore(this.location)
   }
 
   async open () {
-    if (this.store !== null) {
+    if (this.db !== null) {
       return
     }
 
     const location = this.location
     try {
-      this.store = await openDB(this.location, this.version, {
+      this.db = await openDB(this.location, this.version, {
         upgrade (db) {
           db.createObjectStore(location)
         }
@@ -98,23 +118,17 @@ class IdbDatastore extends Adapter {
   }
 
   async put (key, val) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
     try {
-      await this.store.put(this.location, val, key.toBuffer())
+      await this.getStore('readwrite').put(val, key.toBuffer())
     } catch (err) {
       throw Errors.dbWriteFailedError(err)
     }
   }
 
   async get (key) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
     let value
     try {
-      value = await this.store.get(this.location, key.toBuffer())
+      value = await this.getStore().get(key.toBuffer())
     } catch (err) {
       throw Errors.dbWriteFailedError(err)
     }
@@ -126,25 +140,29 @@ class IdbDatastore extends Adapter {
     return typedarrayToBuffer(value)
   }
 
+  /**
+   * Check if a key exists in the datastore
+   *
+   * @param {Key} key
+   * @returns {boolean}
+   */
   async has (key) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
+    let value
     try {
-      await this.get(key)
+      value = await this.getStore().getKey(key.toBuffer())
     } catch (err) {
-      if (err.code === 'ERR_NOT_FOUND') return false
-      throw err
+      throw Errors.dbWriteFailedError(err)
+    }
+
+    if (!value) {
+      return false
     }
     return true
   }
 
   async delete (key) {
-    if (this.store === null) {
-      throw new Error('Datastore needs to be opened.')
-    }
     try {
-      await this.store.delete(this.location, key.toBuffer())
+      await this.getStore('readwrite').delete(key.toBuffer())
     } catch (err) {
       throw Errors.dbDeleteFailedError(err)
     }
@@ -162,10 +180,10 @@ class IdbDatastore extends Adapter {
         dels.push(key.toBuffer())
       },
       commit: async () => {
-        if (this.store === null) {
+        if (this.db === null) {
           throw new Error('Datastore needs to be opened.')
         }
-        const tx = this.store.transaction(this.location, 'readwrite')
+        const tx = this.db.transaction(this.location, 'readwrite')
         const store = tx.store
         await Promise.all(puts.map(p => store.put(p[1], p[0])))
         await Promise.all(dels.map(p => store.delete(p)))
@@ -175,10 +193,10 @@ class IdbDatastore extends Adapter {
   }
 
   query (q) {
-    if (this.store === null) {
+    if (this.db === null) {
       throw new Error('Datastore needs to be opened.')
     }
-    let it = queryIt(q, this.store, this.location)
+    let it = queryIt(q, this)
 
     if (Array.isArray(q.filters)) {
       it = q.filters.reduce((it, f) => filter(it, f), it)
@@ -192,11 +210,11 @@ class IdbDatastore extends Adapter {
   }
 
   close () {
-    if (this.store === null) {
+    if (this.db === null) {
       throw new Error('Datastore needs to be opened.')
     }
-    this.store.close()
-    this.store = null
+    this.db.close()
+    this.db = null
   }
 
   destroy () {
