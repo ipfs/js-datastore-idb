@@ -30,7 +30,7 @@
   "bugs": "https://github.com/ipfs/js-datastore-idb/issues",
   "homepage": "https://github.com/ipfs/js-datastore-idb#readme",
   "dependencies": {
-    "buffer": "^5.5.0",
+    "buffer": "^6.0.0",
     "idb": "^5.0.2",
     "interface-datastore": "^1.0.2"
   },
