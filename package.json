@@ -31,7 +31,7 @@
   "homepage": "https://github.com/ipfs/js-datastore-idb#readme",
   "dependencies": {
     "buffer": "^5.5.0",
-    "idb": "^5.0.2",
+    "idb": "^6.0.0",
     "interface-datastore": "^1.0.2"
   },
   "devDependencies": {
