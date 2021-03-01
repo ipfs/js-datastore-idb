@@ -35,7 +35,7 @@
     "interface-datastore": "^1.0.2"
   },
   "devDependencies": {
-    "aegir": "^25.0.0",
+    "aegir": "^31.0.1",
     "chai": "^4.2.0",
     "datastore-core": "^1.1.0",
     "datastore-level": "^1.1.0",
