@@ -40,7 +40,7 @@
     "datastore-core": "^1.1.0",
     "datastore-level": "^1.1.0",
     "dirty-chai": "^2.0.1",
-    "ipfs-utils": "^2.2.0",
+    "ipfs-utils": "^6.0.7",
     "iso-random-stream": "^1.1.1"
   },
   "contributors": [
