@@ -1,41 +1,53 @@
-# js-datastore-idb
+# datastore-idb <!-- omit in toc -->
 
-[![](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](http://ipn.io)
-[![](https://img.shields.io/badge/project-IPFS-blue.svg?style=flat-square)](http://ipfs.io/)
-[![](https://img.shields.io/badge/freenode-%23ipfs-blue.svg?style=flat-square)](http://webchat.freenode.net/?channels=%23ipfs)
-[![Build Status](https://flat.badgen.net/travis/ipfs/js-datastore-idb)](https://travis-ci.com/ipfs/js-datastore-idb)
-[![Codecov](https://codecov.io/gh/ipfs/js-datastore-idb/branch/master/graph/badge.svg)](https://codecov.io/gh/ipfs/js-datastore-idb)
-[![Dependency Status](https://david-dm.org/ipfs/js-datastore-idb.svg?style=flat-square)](https://david-dm.org/ipfs/js-datastore-idb)
-
+[![ipfs.tech](https://img.shields.io/badge/project-IPFS-blue.svg?style=flat-square)](https://ipfs.tech)
+[![Discuss](https://img.shields.io/discourse/https/discuss.ipfs.tech/posts.svg?style=flat-square)](https://discuss.ipfs.tech)
+[![codecov](https://img.shields.io/codecov/c/github/ipfs/js-datastore-idb.svg?style=flat-square)](https://codecov.io/gh/ipfs/js-datastore-idb)
+[![CI](https://img.shields.io/github/actions/workflow/status/ipfs/js-datastore-idb/js-test-and-release.yml?branch=master\&style=flat-square)](https://github.com/ipfs/js-datastore-idb/actions/workflows/js-test-and-release.yml?query=branch%3Amaster)
 
 > Datastore implementation with IndexedDB backend.
 
-## Lead Maintainer
+## Table of contents <!-- omit in toc -->
 
-[Hugo Dias](https://github.com/hugomrdias)
+- [Install](#install)
+  - [Browser `<script>` tag](#browser-script-tag)
+- [API Docs](#api-docs)
+- [License](#license)
+- [Contribute](#contribute)
 
 ## Install
 
-```
-$ npm install datastore-idb
-```
-
-## Usage
-
-```js
-const IdbStore = require('datastore-idb')
-
-const store = new IdbStore('path/to/store')
+```console
+$ npm i datastore-idb
 ```
 
-## Contribute
+### Browser `<script>` tag
 
-Feel free to join in. All welcome. Open an [issue](https://github.com/ipfs/js-datastore-level/issues)!
+Loading this module through a script tag will make it's exports available as `DatastoreIdb` in the global namespace.
 
-This repository falls under the IPFS [Code of Conduct](https://github.com/ipfs/community/blob/master/code-of-conduct.md).
+```html
+<script src="https://unpkg.com/datastore-idb/dist/index.min.js"></script>
+```
 
-[![](https://cdn.rawgit.com/jbenet/contribute-ipfs-gif/master/img/contribute.gif)](https://github.com/ipfs/community/blob/master/CONTRIBUTING.md)
+## API Docs
+
+- <https://ipfs.github.io/js-datastore-idb>
 
 ## License
 
-[MIT](LICENSE)
+Licensed under either of
+
+- Apache 2.0, ([LICENSE-APACHE](LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT ([LICENSE-MIT](LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
+
+## Contribute
+
+Contributions welcome! Please check out [the issues](https://github.com/ipfs/js-datastore-idb/issues).
+
+Also see our [contributing document](https://github.com/ipfs/community/blob/master/CONTRIBUTING_JS.md) for more information on how we work, and about contributing in general.
+
+Please be aware that all interactions related to this repo are subject to the IPFS [Code of Conduct](https://github.com/ipfs/community/blob/master/code-of-conduct.md).
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+
+[![](https://cdn.rawgit.com/jbenet/contribute-ipfs-gif/master/img/contribute.gif)](https://github.com/ipfs/community/blob/master/CONTRIBUTING.md)

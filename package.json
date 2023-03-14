@@ -2,8 +2,137 @@
   "name": "datastore-idb",
   "version": "1.1.0",
   "description": "Datastore implementation with IndexedDB backend.",
-  "leadMaintainer": "Hugo Dias <hugomrdias@gmail.com>",
-  "main": "src/index.js",
+  "author": "Hugo Dias <hugomrdias@gmail.com>",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/ipfs/js-datastore-idb#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ipfs/js-datastore-idb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ipfs/js-datastore-idb/issues"
+  },
+  "keywords": [
+    "browser",
+    "datastore",
+    "idb",
+    "interface",
+    "ipfs",
+    "key-value"
+  ],
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "type": "module",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "src",
+    "dist",
+    "!dist/test",
+    "!**/*.tsbuildinfo"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "eslintConfig": {
+    "extends": "ipfs",
+    "parserOptions": {
+      "sourceType": "module",
+      "project": [
+        "tsconfig.json",
+        "benchmarks/datastore-level/tsconfig.json"
+      ]
+    }
+  },
+  "release": {
+    "branches": [
+      "master"
+    ],
+    "plugins": [
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "conventionalcommits",
+          "releaseRules": [
+            {
+              "breaking": true,
+              "release": "major"
+            },
+            {
+              "revert": true,
+              "release": "patch"
+            },
+            {
+              "type": "feat",
+              "release": "minor"
+            },
+            {
+              "type": "fix",
+              "release": "patch"
+            },
+            {
+              "type": "docs",
+              "release": "patch"
+            },
+            {
+              "type": "test",
+              "release": "patch"
+            },
+            {
+              "type": "deps",
+              "release": "patch"
+            },
+            {
+              "scope": "no-release",
+              "release": false
+            }
+          ]
+        }
+      ],
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "preset": "conventionalcommits",
+          "presetConfig": {
+            "types": [
+              {
+                "type": "feat",
+                "section": "Features"
+              },
+              {
+                "type": "fix",
+                "section": "Bug Fixes"
+              },
+              {
+                "type": "chore",
+                "section": "Trivial Changes"
+              },
+              {
+                "type": "docs",
+                "section": "Documentation"
+              },
+              {
+                "type": "deps",
+                "section": "Dependencies"
+              },
+              {
+                "type": "test",
+                "section": "Tests"
+              }
+            ]
+          }
+        }
+      ],
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      "@semantic-release/git"
+    ]
+  },
   "scripts": {
     "test": "aegir test -t browser -t webworker",
     "test:browser": "aegir test -t browser",
@@ -11,41 +140,18 @@
     "build": "aegir build",
     "lint": "aegir lint",
     "release": "aegir release",
-    "release-minor": "aegir release --type minor",
-    "release-major": "aegir release --type major",
-    "coverage": "nyc -s npm run test:node && nyc report --reporter=html",
-    "dep-check": "aegir dep-check"
+    "dep-check": "aegir dep-check",
+    "docs": "aegir docs"
   },
-  "repository": "github:ipfs/js-datastore-idb",
-  "keywords": [
-    "interface",
-    "key-value",
-    "ipfs",
-    "datastore",
-    "browser",
-    "idb"
-  ],
-  "author": "Hugo Dias <hugomrdias@gmail.com>",
-  "license": "MIT",
-  "bugs": "https://github.com/ipfs/js-datastore-idb/issues",
-  "homepage": "https://github.com/ipfs/js-datastore-idb#readme",
   "dependencies": {
-    "buffer": "^5.5.0",
-    "idb": "^5.0.2",
-    "interface-datastore": "^1.0.2"
+    "idb": "^7.1.1",
+    "interface-datastore": "^8.0.0",
+    "it-filter": "^2.0.1",
+    "it-sort": "^2.0.1"
   },
   "devDependencies": {
-    "aegir": "^25.0.0",
-    "chai": "^4.2.0",
-    "datastore-core": "^1.1.0",
-    "datastore-level": "^1.1.0",
-    "dirty-chai": "^2.0.1",
-    "ipfs-utils": "^2.2.0",
-    "iso-random-stream": "^1.1.1"
-  },
-  "contributors": [
-    "Hugo Dias <hugomrdias@gmail.com>",
-    "achingbrain <alex@achingbrain.net>",
-    "Hector Sanjuan <code@hector.link>"
-  ]
+    "aegir": "^38.1.7",
+    "datastore-core": "^9.0.2",
+    "interface-datastore-tests": "^4.0.0"
+  }
 }
