@@ -68,7 +68,7 @@ describe('IndexedDB Datastore', function () {
 
       const updater = setInterval(async () => { // eslint-disable-line @typescript-eslint/no-misused-promises
         try {
-          const key = new Key('/a-' + Date.now())
+          const key = new Key(`/a-${Date.now()}`)
 
           await store.put(key, Uint8Array.from([0, 1, 2, 3]))
           await store.has(key)
@@ -86,7 +86,7 @@ describe('IndexedDB Datastore', function () {
           for await (const { key } of store.query({})) {
             await store.get(key)
 
-            const otherKey = new Key('/b-' + Date.now())
+            const otherKey = new Key(`/b-${Date.now()}`)
             const otherValue = Uint8Array.from([0, 1, 2, 3])
             await store.put(otherKey, otherValue)
             const res = await store.get(otherKey)

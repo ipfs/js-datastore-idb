@@ -12,6 +12,7 @@
     "start": "npm run build && playwright-test dist/src/index.js --runner benchmark"
   },
   "devDependencies": {
+    "datastore-level": "^10.0.1",
     "datastore-idb": "file:../../",
     "multiformats": "^11.0.1",
     "playwright-test": "^8.2.0",

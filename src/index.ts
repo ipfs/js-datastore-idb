@@ -46,7 +46,7 @@ export class IDBDatastore extends BaseDatastore {
     this.db?.close()
   }
 
-  async put (key: Key, val: Uint8Array) {
+  async put (key: Key, val: Uint8Array): Promise<void> {
     if (this.db == null) {
       throw new Error('Datastore needs to be opened.')
     }
@@ -123,7 +123,7 @@ export class IDBDatastore extends BaseDatastore {
         try {
           const ops = puts.filter(({ key }) => {
             // don't put a key we are about to delete
-            return !dels.find(delKey => delKey.toString() === key.toString())
+            return dels.find(delKey => delKey.toString() === key.toString()) == null
           })
             .map(put => {
               return async () => {
@@ -139,7 +139,7 @@ export class IDBDatastore extends BaseDatastore {
               await tx.done
             })
 
-          await Promise.all(ops.map(op => op()))
+          await Promise.all(ops.map(async op => { await op() }))
         } catch {
           tx.abort()
         }
@@ -186,7 +186,7 @@ export class IDBDatastore extends BaseDatastore {
     let index = -1
 
     for (const key of await this.db.getAllKeys(this.location)) {
-      if (q.prefix != null && !key.toString().startsWith(q.prefix)) {
+      if (q.prefix != null && !key.toString().startsWith(q.prefix)) { // eslint-disable-line @typescript-eslint/no-base-to-string
         continue
       }
 
@@ -200,7 +200,7 @@ export class IDBDatastore extends BaseDatastore {
         continue
       }
 
-      const k = new Key(key.toString())
+      const k = new Key(key.toString()) // eslint-disable-line @typescript-eslint/no-base-to-string
       let value: Uint8Array | undefined
 
       try {
@@ -222,7 +222,7 @@ export class IDBDatastore extends BaseDatastore {
     }
   }
 
-  destroy () {
-    return deleteDB(this.location)
+  async destroy (): Promise<void> {
+    await deleteDB(this.location)
   }
 }
