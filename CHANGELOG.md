@@ -1,3 +1,27 @@
+## [2.0.0](https://github.com/ipfs/js-datastore-idb/compare/v1.1.0...v2.0.0) (2023-03-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* this module has been converted to typescript, updated to the latest interface-datastore version and is ESM-only
+
+### Features
+
+* convert to typescript ([#98](https://github.com/ipfs/js-datastore-idb/issues/98)) ([a34262f](https://github.com/ipfs/js-datastore-idb/commit/a34262fa979145a8defcb0ff8a0de2e0cf0ef54b)), closes [#6](https://github.com/ipfs/js-datastore-idb/issues/6)
+
+
+### Documentation
+
+* fix link ([417af5b](https://github.com/ipfs/js-datastore-idb/commit/417af5b92518a8f81d3aa2b89e1755312453420f))
+
+
+### Trivial Changes
+
+* **deps-dev:** bump aegir from 22.1.0 to 24.0.0 ([f71f236](https://github.com/ipfs/js-datastore-idb/commit/f71f2360427b7d334b346cc97e8e6b461696de55))
+* **deps-dev:** bump aegir from 24.0.0 to 25.0.0 ([2479fe6](https://github.com/ipfs/js-datastore-idb/commit/2479fe628c871ab1db3e48b8acc12a302575a16c))
+* Update .github/workflows/stale.yml [skip ci] ([c113be2](https://github.com/ipfs/js-datastore-idb/commit/c113be22c50bdbbef14a2c7c2fb265ee008d9562))
+* update aegir ([5f00f1b](https://github.com/ipfs/js-datastore-idb/commit/5f00f1b8791b7e578275ed60f202417153311497))
+
 <a name="1.1.0"></a>
 # [1.1.0](https://github.com/ipfs/js-datastore-idb/compare/v1.0.2...v1.1.0) (2020-05-07)
 
@@ -196,6 +220,3 @@
 
 * key handling ([682f8b3](https://github.com/ipfs/js-datastore-level/commit/682f8b3))
 * working interop with go ([f5e03c6](https://github.com/ipfs/js-datastore-level/commit/f5e03c6))
-
-
-
