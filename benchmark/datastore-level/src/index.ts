@@ -12,38 +12,39 @@ async function testPut (): Promise<void> {
   console.info('simple put')
 
   const suite = new Bench({
-    iterations: 1
+    iterations: 1,
+    time: 100
   })
-  suite.add('level put', async () => {
+  suite.add('level put', async function () {
     for (let i = 0; i < BLOCKS; i++) {
       // @ts-expect-error
       await this.store.put(new Key(`/z/block-${i}`), Uint8Array.from([0, 1, 2, 3, 4, i]))
     }
   }, {
-    async beforeEach () {
+    beforeEach:  async function () {
       // @ts-expect-error
       this.store = new LevelDatastore('hello-level-put')
       // @ts-expect-error
       await this.store.open()
     },
-    async afterEach () {
+    afterEach: async function () {
       // @ts-expect-error
       await this.store.close()
     }
   })
-  suite.add('idb put', async () => {
+  suite.add('idb put', async function () {
     for (let i = 0; i < BLOCKS; i++) {
       // @ts-expect-error
-      await store.put(new Key(`/z/block-${i}`), Uint8Array.from([0, 1, 2, 3, 4, i]))
+      await this.store.put(new Key(`/z/block-${i}`), Uint8Array.from([0, 1, 2, 3, 4, i]))
     }
   }, {
-    async beforeEach () {
+    beforeEach: async function () {
       // @ts-expect-error
       this.store = new IDBDatastore('hello-idb-put')
       // @ts-expect-error
       await this.store.open()
     },
-    async afterEach () {
+    afterEach: async function () {
       // @ts-expect-error
       await this.store.close()
     }
@@ -76,50 +77,51 @@ async function testGet (): Promise<void> {
   console.info('simple get')
 
   const suite = new Bench({
-    iterations: 1
+    iterations: 1,
+    time: 100
   })
-  suite.add('level get', async () => {
+  suite.add('level get', async function () {
     for (let i = 0; i < BLOCKS; i++) {
       // @ts-expect-error
       await this.store.get(new Key(`/z/block-${i}`))
     }
   }, {
-    async beforeEach () {
+    beforeEach: async function () {
       // @ts-expect-error
       this.store = new LevelDatastore('hello-level-get')
+
+      // @ts-expect-error
+      await this.store.open()
 
       for (let i = 0; i < BLOCKS; i++) {
         // @ts-expect-error
         await this.store.put(new Key(`/z/block-${i}`), Uint8Array.from([0, 1, 2, 3, 4, i]))
       }
-
-      // @ts-expect-error
-      await this.store.open()
     },
-    async afterEach () {
+    afterEach: async function () {
       // @ts-expect-error
       await this.store.close()
     }
   })
-  suite.add('idb get', async () => {
+  suite.add('idb get', async function () {
     for (let i = 0; i < BLOCKS; i++) {
       // @ts-expect-error
       await this.store.get(new Key(`/z/block-${i}`))
     }
   }, {
-    async beforeEach () {
+    beforeEach: async function () {
       // @ts-expect-error
       this.store = new IDBDatastore('hello-idb-get')
+
+      // @ts-expect-error
+      await this.store.open()
 
       for (let i = 0; i < BLOCKS; i++) {
         // @ts-expect-error
         await this.store.put(new Key(`/z/block-${i}`), Uint8Array.from([0, 1, 2, 3, 4, i]))
       }
-
-      // @ts-expect-error
-      await this.store.open()
     },
-    async afterEach () {
+    afterEach: async function () {
       // @ts-expect-error
       await this.store.close()
     }
