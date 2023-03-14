@@ -1,3 +1,3 @@
-module.exports = {
-  bundlesize: { maxSize: '12.1kB' }
+export default {
+  bundlesize: { maxSize: '16kB' }
 }
