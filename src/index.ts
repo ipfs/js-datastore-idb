@@ -46,13 +46,15 @@ export class IDBDatastore extends BaseDatastore {
     this.db?.close()
   }
 
-  async put (key: Key, val: Uint8Array): Promise<void> {
+  async put (key: Key, val: Uint8Array): Promise<Key> {
     if (this.db == null) {
       throw new Error('Datastore needs to be opened.')
     }
 
     try {
       await this.db.put(this.location, val, key.toString())
+
+      return key
     } catch (err: any) {
       throw Errors.dbWriteFailedError(err)
     }
