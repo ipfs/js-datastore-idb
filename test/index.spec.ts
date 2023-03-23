@@ -46,7 +46,7 @@ describe('IndexedDB Datastore', function () {
             datastore: three
           }
         ])
-        await d.open()
+
         return d
       },
       teardown () {
