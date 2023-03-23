@@ -1,3 +1,15 @@
+## [2.0.1](https://github.com/ipfs/js-datastore-idb/compare/v2.0.0...v2.0.1) (2023-03-23)
+
+
+### Bug Fixes
+
+* update interface-store to 5.x.x ([#100](https://github.com/ipfs/js-datastore-idb/issues/100)) ([4c918fc](https://github.com/ipfs/js-datastore-idb/commit/4c918fcef352f381810d18225e679202a873f028))
+
+
+### Trivial Changes
+
+* update benchmark ([#99](https://github.com/ipfs/js-datastore-idb/issues/99)) ([49aa042](https://github.com/ipfs/js-datastore-idb/commit/49aa0429e0c07f1c53c8031567e3b77f154daa49))
+
 ## [2.0.0](https://github.com/ipfs/js-datastore-idb/compare/v1.1.0...v2.0.0) (2023-03-14)
 
 
